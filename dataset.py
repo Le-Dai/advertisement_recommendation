@@ -708,6 +708,11 @@ def get_pcvr_data(
 
     n_valid_rgs = max(1, int(total_rgs * valid_ratio))
     n_train_rgs = total_rgs - n_valid_rgs
+    # When there is only one Row Group, use it for both training and validation.
+    share_single_rg = n_train_rgs == 0
+    if share_single_rg:
+        n_train_rgs = total_rgs
+        logging.info("Only 1 Row Group: sharing it for both train and validation")
 
     # train_ratio: use only the first N% of the training Row Groups.
     if train_ratio < 1.0:
@@ -715,7 +720,10 @@ def get_pcvr_data(
         logging.info(f"train_ratio={train_ratio}: using {n_train_rgs} train Row Groups")
 
     train_rows = sum(r[2] for r in rg_info[:n_train_rgs])
-    valid_rows = sum(r[2] for r in rg_info[n_train_rgs:])
+    if share_single_rg:
+        valid_rows = train_rows
+    else:
+        valid_rows = sum(r[2] for r in rg_info[n_train_rgs:])
 
     logging.info(f"Row Group split: {n_train_rgs} train ({train_rows} rows), "
                  f"{n_valid_rgs} valid ({valid_rows} rows)")
@@ -742,6 +750,7 @@ def get_pcvr_data(
         num_workers=num_workers, pin_memory=use_cuda, **_train_kw,
     )
 
+    valid_rg_range = (0, total_rgs) if share_single_rg else (n_train_rgs, total_rgs)
     valid_dataset = PCVRParquetDataset(
         parquet_path=data_dir,
         schema_path=schema_path,
@@ -749,7 +758,7 @@ def get_pcvr_data(
         seq_max_lens=seq_max_lens,
         shuffle=False,
         buffer_batches=0,
-        row_group_range=(n_train_rgs, total_rgs),
+        row_group_range=valid_rg_range,
         clip_vocab=clip_vocab,
     )
     valid_loader = DataLoader(

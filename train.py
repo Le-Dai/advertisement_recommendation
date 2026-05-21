@@ -42,13 +42,17 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="PCVRHyFormer Training")
 
     # Paths (environment variables take precedence).
-    parser.add_argument('--data_dir', type=str, default=None,
+    _script_dir = os.path.dirname(os.path.abspath(__file__))
+    parser.add_argument('--data_dir', type=str,
+                        default=os.path.join(_script_dir, 'data'),
                         help='Training data directory (env: TRAIN_DATA_PATH)')
     parser.add_argument('--schema_path', type=str, default=None,
                         help='Schema JSON path (defaults to <data_dir>/schema.json)')
-    parser.add_argument('--ckpt_dir', type=str, default=None,
+    parser.add_argument('--ckpt_dir', type=str,
+                        default=os.path.join(_script_dir, 'checkpoints'),
                         help='Checkpoint output directory (env: TRAIN_CKPT_PATH)')
-    parser.add_argument('--log_dir', type=str, default=None,
+    parser.add_argument('--log_dir', type=str,
+                        default=os.path.join(_script_dir, 'logs'),
                         help='Log directory (env: TRAIN_LOG_PATH)')
 
     # Training hyperparameters.
@@ -75,7 +79,7 @@ def parse_args() -> argparse.Namespace:
                         help='Shuffle buffer size, in units of batches. '
                              'Lower values reduce memory usage.')
     parser.add_argument('--train_ratio', type=float, default=1.0,
-                        help='Fraction of training Row Groups to use (takes the first N%)')
+                        help='Fraction of training Row Groups to use (takes the first N pct)')
     parser.add_argument('--valid_ratio', type=float, default=0.1,
                         help='Fraction of all Row Groups used for validation (takes the tail)')
     parser.add_argument('--eval_every_n_steps', type=int, default=0,
@@ -216,7 +220,10 @@ def parse_args() -> argparse.Namespace:
     args.data_dir = os.environ.get('TRAIN_DATA_PATH', args.data_dir)
     args.ckpt_dir = os.environ.get('TRAIN_CKPT_PATH', args.ckpt_dir)
     args.log_dir = os.environ.get('TRAIN_LOG_PATH', args.log_dir)
-    args.tf_events_dir = os.environ.get('TRAIN_TF_EVENTS_PATH')
+    args.tf_events_dir = os.environ.get(
+        'TRAIN_TF_EVENTS_PATH',
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tf_events'))
+
 
     return args
 
